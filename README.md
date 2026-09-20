@@ -10,3 +10,11 @@ Mobile-first athlete performance platform.
 
 ## Data layer
 The production data model lives in the isolated G10 Supabase project with Row Level Security enabled. Authentication and role-based access are the next integration step.
+
+## Local setup
+1. Run `npm install`.
+2. Copy `.env.example` to `.env.local`.
+3. Add only the G10 project URL and publishable key.
+4. Run `npm run dev`.
+
+The app keeps using browser-only demo data until the authentication flow is connected. Server and browser Supabase client factories are already available in `lib/supabase` for that next step. Never expose a Supabase secret or `service_role` key in frontend environment variables.

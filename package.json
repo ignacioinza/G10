@@ -6,12 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run build"
   },
   "dependencies": {
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.116.0",
     "framer-motion": "12.23.12",
     "lucide-react": "0.468.0",
-    "next": "15.5.2",
+    "motion-dom": "12.23.12",
+    "motion-utils": "12.23.6",
+    "next": "15.5.24",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
@@ -20,5 +25,8 @@
     "@types/react": "19.0.10",
     "@types/react-dom": "19.0.4",
     "typescript": "5.8.2"
+  },
+  "overrides": {
+    "postcss": "8.5.28"
   }
 }
