@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { approvedIndexImage } from "./indexImage";
 
 type Pilot = {
   id: string;
@@ -189,7 +188,7 @@ export default function PampaSite() {
       {active === "equipo" && (
         <>
           <section className="approvedIndex">
-            <img src={approvedIndexImage} alt="Pampa Racing Team — inicio" />
+            <img src="/pampa-index.webp" alt="Pampa Racing Team — inicio" />
             <button className="hotspot hsCompetencias" aria-label="Ver competencias" onClick={() => setActive("competencias")} />
             <button className="hotspot hsPilotos" aria-label="Ver pilotos" onClick={() => setActive("pilotos")} />
             <button className="hotspot hsEquipo" aria-label="Conocer el equipo" onClick={() => window.scrollTo({top: window.innerHeight * 0.9, behavior: "smooth"})} />
