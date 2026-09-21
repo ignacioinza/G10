@@ -1,16 +1,9 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "G10 · Alto Rendimiento",
-  description: "Entrenamiento, bienestar y rendimiento en un solo lugar.",
-};
-
-export const viewport: Viewport = {
-  themeColor: "#0a0d0b",
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
+  title: "Pampa Racing Team",
+  description: "Sitio oficial de Pampa Racing Team. Equipo, competencias y pilotos.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
