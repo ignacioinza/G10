@@ -5,20 +5,19 @@ import Image from "next/image";
 import {
   ArrowLeft, ArrowRight, Bell, CalendarDays, Check, ChevronDown,
   ChevronLeft, ChevronRight, Clock, Dumbbell, GripVertical, Home,
-  MessageCircle, MoreHorizontal, Plus, Share2, Trash2, UsersRound,
+  LogOut, MessageCircle, MoreHorizontal, Plus, Share2, Trash2, UsersRound, X,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
+import {
+  useG10Workspace,
+  type AthleteOption,
+  type G10Exercise as Exercise,
+  type G10Session as Session,
+} from "@/lib/use-g10-workspace";
+
 type Role = "coach" | "athlete";
 type Screen = "home" | "training";
-type Exercise = {
-  id: string; name: string; sets: number; reps: string; rest: number;
-  detail: string; image: string;
-};
-type Session = {
-  title: string; objective: string; duration: number;
-  load: "Baja" | "Media" | "Alta"; exercises: Exercise[];
-};
 
 const photos = [
   "/images/exercise-1.jpg",
@@ -87,7 +86,7 @@ function Brand({ role }: { role: Role }) {
   );
 }
 
-function Header({ role, setRole }: { role: Role; setRole: (role: Role) => void }) {
+function Header({ role, onAccount, connected }: { role: Role; onAccount: () => void; connected: boolean }) {
   return (
     <header className="app-header">
       <Brand role={role} />
@@ -95,10 +94,11 @@ function Header({ role, setRole }: { role: Role; setRole: (role: Role) => void }
         {role === "athlete" && <button className="bare-icon" aria-label="Notificaciones"><Bell size={21} /></button>}
         <button
           className="avatar-button"
-          aria-label={role === "coach" ? "Cambiar a vista deportista" : "Cambiar a vista profesor"}
-          onClick={() => setRole(role === "coach" ? "athlete" : "coach")}
+          aria-label="Abrir cuenta"
+          onClick={onAccount}
         >
           <Image src={avatar} alt="" width={38} height={38} />
+          <i className={connected ? "online" : ""} />
         </button>
       </div>
     </header>
@@ -125,7 +125,21 @@ function BottomNav({ role }: { role: Role }) {
   );
 }
 
-function CoachView({ session, save }: { session: Session; save: (session: Session) => void }) {
+function CoachView({
+  session,
+  save,
+  athletes,
+  selectedAthleteId,
+  onSelectAthlete,
+  syncing,
+}: {
+  session: Session;
+  save: (session: Session) => Promise<{ ok: boolean; message: string }>;
+  athletes: AthleteOption[];
+  selectedAthleteId: string;
+  onSelectAthlete: (id: string) => void;
+  syncing: boolean;
+}) {
   const [draft, setDraft] = useState(session);
   const [toast, setToast] = useState("");
   useEffect(() => setDraft(session), [session]);
@@ -150,6 +164,11 @@ function CoachView({ session, save }: { session: Session; save: (session: Sessio
       }],
     });
   };
+  const selectedAthlete = athletes.find((athlete) => athlete.id === selectedAthleteId);
+  const persist = async () => {
+    const result = await save(draft);
+    flash(result.message);
+  };
   return (
     <>
       <main className="screen-content coach-content">
@@ -170,11 +189,19 @@ function CoachView({ session, save }: { session: Session; save: (session: Sessio
         </div>
 
         <label className="field-label">Seleccioná deportista</label>
-        <button className="athlete-select">
+        <div className="athlete-select">
           <Image src={avatar} alt="" width={44} height={44} />
-          <span><strong>Julián Bordón</strong><small>Delantero · 19 años</small></span>
+          <span>
+            <strong>{selectedAthlete?.fullName ?? "Julián Bordón"}</strong>
+            <small>{selectedAthlete ? [selectedAthlete.sport, selectedAthlete.position].filter(Boolean).join(" · ") : "Delantero · 19 años"}</small>
+          </span>
           <ChevronDown size={20} />
-        </button>
+          {athletes.length > 0 && (
+            <select aria-label="Seleccionar deportista" value={selectedAthleteId} onChange={(event) => onSelectAthlete(event.target.value)}>
+              {athletes.map((athlete) => <option key={athlete.id} value={athlete.id}>{athlete.fullName}</option>)}
+            </select>
+          )}
+        </div>
 
         <div className="section-title"><h2>Crear sesión</h2><button>Plantillas</button></div>
         <section className="panel form-panel">
@@ -207,8 +234,8 @@ function CoachView({ session, save }: { session: Session; save: (session: Sessio
           ))}
         </section>
         <div className="dual-actions">
-          <button className="secondary-action" onClick={() => { save(draft); flash("Borrador guardado"); }}>Guardar borrador</button>
-          <button className="primary-action" onClick={() => { save(draft); flash("Sesión asignada a Julián"); }}>Asignar sesión</button>
+          <button className="secondary-action" disabled={syncing} onClick={() => flash("Borrador guardado en este dispositivo")}>Guardar borrador</button>
+          <button className="primary-action" disabled={syncing} onClick={persist}>{syncing ? "Sincronizando…" : "Asignar sesión"}</button>
         </div>
       </main>
       <BottomNav role="coach" />
@@ -269,8 +296,17 @@ function AthleteView({ session, openTraining }: { session: Session; openTraining
   );
 }
 
-function TrainingView({ session, onBack }: { session: Session; onBack: () => void }) {
+function TrainingView({
+  session,
+  onBack,
+  onComplete,
+}: {
+  session: Session;
+  onBack: () => void;
+  onComplete: (session: Session) => Promise<{ ok: boolean; message: string }>;
+}) {
   const [done, setDone] = useState<string[]>([]);
+  const [completionMessage, setCompletionMessage] = useState("");
   const progress = useMemo(() => Math.round((done.length / Math.max(session.exercises.length, 1)) * 100), [done, session.exercises.length]);
   return (
     <main className="training-screen">
@@ -308,17 +344,118 @@ function TrainingView({ session, onBack }: { session: Session; onBack: () => voi
         </section>
         <div className="completion-copy"><span>Progreso de la sesión</span><strong>{done.length}/{session.exercises.length}</strong></div>
         <div className="completion-track"><motion.div animate={{ width: progress + "%" }} /></div>
-        <button className="complete-button" disabled={progress < 100}>{progress === 100 ? "Sesión completada" : "Marcá todos los ejercicios"}</button>
+        <button
+          className="complete-button"
+          disabled={progress < 100}
+          onClick={async () => {
+            const result = await onComplete(session);
+            setCompletionMessage(result.message);
+          }}
+        >
+          {progress === 100 ? "Registrar sesión completada" : "Marcá todos los ejercicios"}
+        </button>
+        {completionMessage && <p className="completion-message">{completionMessage}</p>}
       </div>
     </main>
+  );
+}
+
+function AccountPanel({
+  open,
+  onClose,
+  role,
+  setDemoRole,
+  configured,
+  userEmail,
+  workspaceRole,
+  message,
+  syncing,
+  signIn,
+  signUp,
+  signOut,
+}: {
+  open: boolean;
+  onClose: () => void;
+  role: Role;
+  setDemoRole: (role: Role) => void;
+  configured: boolean;
+  userEmail?: string;
+  workspaceRole: string | null;
+  message: string;
+  syncing: boolean;
+  signIn: (email: string, password: string) => Promise<{ ok: boolean; message: string }>;
+  signUp: (email: string, password: string) => Promise<{ ok: boolean; message: string }>;
+  signOut: () => Promise<void>;
+}) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [feedback, setFeedback] = useState("");
+  if (!open) return null;
+  const submit = async (mode: "signin" | "signup") => {
+    if (!email || password.length < 6) {
+      setFeedback("Ingresá un email y una contraseña de al menos 6 caracteres.");
+      return;
+    }
+    const result = mode === "signin" ? await signIn(email, password) : await signUp(email, password);
+    setFeedback(result.message);
+    if (result.ok && mode === "signin") window.setTimeout(onClose, 700);
+  };
+  return (
+    <motion.div className="account-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <motion.section className="account-sheet" initial={{ y: 45 }} animate={{ y: 0 }}>
+        <button className="account-close" onClick={onClose} aria-label="Cerrar cuenta"><X size={20} /></button>
+        <Image className="account-logo" src="/images/g10-logo.png" alt="G10" width={130} height={44} />
+        <h2>{userEmail ? "Tu cuenta G10" : "Ingresá a G10"}</h2>
+        <p className="account-subtitle">Entrenamiento, seguimiento y rendimiento en un mismo equipo.</p>
+
+        {userEmail ? (
+          <div className="connected-account">
+            <span>Conectado como</span><strong>{userEmail}</strong>
+            <small>Rol: {workspaceRole ?? "pendiente de asignación"}</small>
+            <button onClick={async () => { await signOut(); onClose(); }}><LogOut size={17} /> Cerrar sesión</button>
+          </div>
+        ) : (
+          <>
+            <div className="auth-fields">
+              <label><span>Email</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="tu@email.com" /></label>
+              <label><span>Contraseña</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo 6 caracteres" /></label>
+            </div>
+            <button className="auth-primary" disabled={!configured || syncing} onClick={() => submit("signin")}>{syncing ? "Conectando…" : "Iniciar sesión"}</button>
+            <button className="auth-secondary" disabled={!configured || syncing} onClick={() => submit("signup")}>Crear cuenta</button>
+          </>
+        )}
+
+        <div className="connection-state"><i className={userEmail ? "online" : ""} /> {feedback || message}</div>
+        {!userEmail && (
+          <div className="demo-switch">
+            <span>Explorar sin cuenta</span>
+            <div>
+              <button className={role === "athlete" ? "active" : ""} onClick={() => { setDemoRole("athlete"); onClose(); }}>Vista alumno</button>
+              <button className={role === "coach" ? "active" : ""} onClick={() => { setDemoRole("coach"); onClose(); }}>Vista profesor</button>
+            </div>
+          </div>
+        )}
+      </motion.section>
+    </motion.div>
   );
 }
 
 export function G10App() {
   const [role, setRole] = useState<Role>("athlete");
   const [screen, setScreen] = useState<Screen>("home");
-  const { session, save } = useLocalSession();
+  const [accountOpen, setAccountOpen] = useState(false);
+  const { session: localSession, save: saveLocal } = useLocalSession();
+  const workspace = useG10Workspace();
+  const session = workspace.remoteSession ?? localSession;
+  useEffect(() => {
+    if (!workspace.role) return;
+    setRole(["admin", "coach", "trainer"].includes(workspace.role) ? "coach" : "athlete");
+  }, [workspace.role]);
   const switchRole = (nextRole: Role) => { setRole(nextRole); setScreen("home"); };
+  const saveSession = async (nextSession: Session) => {
+    saveLocal(nextSession);
+    return workspace.saveRemoteSession(nextSession);
+  };
   return (
     <div className="app-shell">
       <div className="phone-frame">
@@ -326,14 +463,39 @@ export function G10App() {
           <AnimatePresence mode="wait">
             {screen === "training" ? (
               <motion.div key="training" initial={{ x: 35, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 35, opacity: 0 }}>
-                <TrainingView session={session} onBack={() => setScreen("home")} />
+                <TrainingView session={session} onBack={() => setScreen("home")} onComplete={workspace.completeRemoteSession} />
               </motion.div>
             ) : (
               <motion.div key={role} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <Header role={role} setRole={switchRole} />
-                {role === "coach" ? <CoachView session={session} save={save} /> : <AthleteView session={session} openTraining={() => setScreen("training")} />}
+                <Header role={role} onAccount={() => setAccountOpen(true)} connected={Boolean(workspace.user)} />
+                {role === "coach" ? (
+                  <CoachView
+                    session={session}
+                    save={saveSession}
+                    athletes={workspace.athletes}
+                    selectedAthleteId={workspace.selectedAthleteId}
+                    onSelectAthlete={workspace.setSelectedAthleteId}
+                    syncing={workspace.syncing}
+                  />
+                ) : <AthleteView session={session} openTraining={() => setScreen("training")} />}
               </motion.div>
             )}
+          </AnimatePresence>
+          <AnimatePresence>
+            <AccountPanel
+              open={accountOpen}
+              onClose={() => setAccountOpen(false)}
+              role={role}
+              setDemoRole={switchRole}
+              configured={workspace.configured}
+              userEmail={workspace.user?.email}
+              workspaceRole={workspace.role}
+              message={workspace.connectionMessage}
+              syncing={workspace.syncing}
+              signIn={workspace.signIn}
+              signUp={workspace.signUp}
+              signOut={workspace.signOut}
+            />
           </AnimatePresence>
         </div>
       </div>
