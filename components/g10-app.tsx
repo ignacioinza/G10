@@ -81,7 +81,7 @@ function useLocalSession() {
 function Brand({ role }: { role: Role }) {
   return (
     <div className="brand-lockup">
-      <div className="brand-word">G1<span>0</span></div>
+      <Image className="brand-logo" src="/images/g10-logo.png" alt="G10" width={94} height={32} priority />
       <div className="brand-role">{role === "coach" ? "Profesor" : "Deportista"}</div>
     </div>
   );

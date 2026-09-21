@@ -8,8 +8,8 @@ button{cursor:pointer}
 .phone-screen{min-height:886px;overflow:hidden;position:relative;border-radius:34px;background:linear-gradient(160deg,#07141c,#08131a 60%,#061117)}
 .phone-screen>div{position:relative;min-height:886px}
 .app-header{height:105px;padding:28px 20px 12px;display:flex;justify-content:space-between;align-items:center}
-.brand-word{font-size:27px;line-height:.9;font-weight:950;letter-spacing:2px}.brand-word span{color:var(--green)}
-.brand-role{font-size:11px;text-transform:uppercase;letter-spacing:2.5px;color:#c5ced4;margin-top:7px}
+.brand-logo{display:block;width:94px;height:32px;object-fit:contain;object-position:left center;transform:scale(1.42);transform-origin:left center}
+.brand-role{font-size:10px;text-transform:uppercase;letter-spacing:2.5px;color:#c5ced4;margin-top:3px}
 .header-actions{display:flex;gap:10px;align-items:center}.bare-icon,.avatar-button{border:0;color:white;background:transparent;padding:0;display:grid;place-items:center}
 .avatar-button img{border-radius:50%;object-fit:cover;border:2px solid #91a3ae}
 .screen-content{padding:0 17px 104px}.coach-content{padding-bottom:118px}
