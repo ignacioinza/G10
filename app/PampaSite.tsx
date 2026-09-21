@@ -90,6 +90,66 @@ const initialRegistrations: Record<string, string[]> = {
   "global-endurance": ["Agustín Domingo"],
 };
 
+function HeroCar() {
+  return (
+    <svg className="heroCarSvg" viewBox="0 0 1100 560" role="img" aria-label="Auto Pampa Racing Team">
+      <defs>
+        <linearGradient id="bodyBlue" x1="0" x2="1">
+          <stop offset="0" stopColor="#031827"/>
+          <stop offset=".35" stopColor="#09aee8"/>
+          <stop offset=".7" stopColor="#04629a"/>
+          <stop offset="1" stopColor="#02070b"/>
+        </linearGradient>
+        <linearGradient id="gold" x1="0" x2="1">
+          <stop offset="0" stopColor="#f7d16b"/>
+          <stop offset=".5" stopColor="#e0a91d"/>
+          <stop offset="1" stopColor="#8b5b00"/>
+        </linearGradient>
+        <radialGradient id="headlight">
+          <stop offset="0" stopColor="#ffffff"/>
+          <stop offset=".35" stopColor="#aeefff"/>
+          <stop offset="1" stopColor="#0bbff0" stopOpacity="0"/>
+        </radialGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="14"/>
+        </filter>
+      </defs>
+      <ellipse cx="575" cy="485" rx="420" ry="48" fill="#000" opacity=".72"/>
+      <ellipse cx="790" cy="402" rx="180" ry="90" fill="#0ab8ea" opacity=".12" filter="url(#glow)"/>
+      <g transform="translate(30 0)">
+        <circle cx="280" cy="430" r="95" fill="#020304"/>
+        <circle cx="280" cy="430" r="63" fill="#15232b"/>
+        <circle cx="280" cy="430" r="31" fill="#d9a626"/>
+        <circle cx="850" cy="430" r="95" fill="#020304"/>
+        <circle cx="850" cy="430" r="63" fill="#15232b"/>
+        <circle cx="850" cy="430" r="31" fill="#d9a626"/>
+        <path d="M145 408 C170 310 255 243 389 221 L680 198 C792 190 865 227 926 294 L987 354 C1012 380 993 419 952 425 L854 438 C828 359 779 328 702 331 L404 335 C338 340 305 373 286 438 L188 434 C153 431 131 425 145 408Z" fill="url(#bodyBlue)" stroke="#36c7f1" strokeWidth="4"/>
+        <path d="M388 222 L471 125 L687 123 L777 203 Z" fill="#07121c" stroke="#2b647c" strokeWidth="4"/>
+        <path d="M486 145 L669 142 L733 202 L425 215Z" fill="#03070b"/>
+        <path d="M170 370 L292 350 L384 334 L761 331 L930 353 L969 386 L877 400 L724 378 L368 378 L228 410 L153 409Z" fill="#0b1b25" opacity=".88"/>
+        <path d="M182 326 L338 257 L392 223 L514 209 L432 329 L286 360Z" fill="#ffffff" opacity=".86"/>
+        <path d="M432 329 L515 210 L632 204 L548 334Z" fill="#0fb5e8"/>
+        <path d="M548 334 L632 204 L742 208 L683 335Z" fill="url(#gold)"/>
+        <path d="M683 335 L742 208 L867 252 L820 344Z" fill="#f3f6f8" opacity=".88"/>
+        <path d="M875 276 L970 348 L932 359 L836 335Z" fill="#0ab8ea"/>
+        <rect x="412" y="367" width="148" height="72" rx="8" fill="#071018" stroke="#e7edf1" strokeWidth="3"/>
+        <text x="486" y="416" textAnchor="middle" fill="#fff" fontSize="56" fontWeight="900" fontFamily="Arial">77</text>
+        <text x="525" y="302" fill="#ffffff" fontSize="68" fontWeight="900" fontStyle="italic" fontFamily="Arial">PAMPA</text>
+        <g transform="translate(735 290)">
+          <circle r="58" fill="url(#gold)"/>
+          {Array.from({length:16}).map((_,i)=><rect key={i} x="-4" y="-88" width="8" height="38" rx="4" fill="#f0b929" transform={`rotate(${i*22.5})`}/>)}
+        </g>
+        <text x="493" y="170" fill="#dfe7eb" fontSize="30" fontWeight="800" letterSpacing="4" fontFamily="Arial">PAMPA</text>
+        <text x="689" y="171" fill="#e2ae27" fontSize="28" fontWeight="900" fontFamily="Arial">#77</text>
+        <ellipse cx="906" cy="331" rx="88" ry="50" fill="url(#headlight)" opacity=".88"/>
+        <ellipse cx="217" cy="340" rx="45" ry="24" fill="#ffffff" opacity=".55"/>
+        <path d="M210 225 L145 183 L102 188 L132 223Z" fill="#08141c" stroke="#14bde9" strokeWidth="4"/>
+        <path d="M824 199 L982 182 L1005 197 L848 218Z" fill="#071018" stroke="#13bce9" strokeWidth="4"/>
+      </g>
+    </svg>
+  );
+}
+
 export default function PampaSite() {
   const [active, setActive] = useState<"equipo" | "competencias" | "pilotos">("equipo");
   const [selectedPilot, setSelectedPilot] = useState<Pilot>(pilots[0]);
@@ -112,9 +172,8 @@ export default function PampaSite() {
     <main>
       <header className="topbar">
         <button className="brand" onClick={() => setActive("equipo")} aria-label="Pampa Racing Team">
-          <span className="sunmark">☀</span>
-          <span className="brandword">PAMPA</span>
-          <small>RACING TEAM</small>
+          <span className="sunLogo" aria-hidden="true">☀</span>
+          <span className="brandBlock"><b>PAMPA</b><small>RACING TEAM</small></span>
         </button>
         <nav>
           <button className={active === "equipo" ? "active" : ""} onClick={() => setActive("equipo")}>EQUIPO</button>
@@ -126,31 +185,58 @@ export default function PampaSite() {
 
       {active === "equipo" && (
         <>
-          <section className="hero">
-            <div className="heroGlow" />
+          <section className="hero heroV2">
+            <div className="trackGrid" />
             <div className="heroCopy">
-              <p className="eyebrow">SIMRACING ARGENTINO · DESDE 2024</p>
-              <h1>MISMAS RAÍCES.<br/><span>MAYORES DESAFÍOS.</span></h1>
-              <p className="lead">Competimos como equipo. Entrenamos como profesionales. Crecemos como una familia.</p>
+              <div className="eyebrowLine"><span/> SIMRACING ARGENTINO · TEMPORADA 2026</div>
+              <h1>NUEVA ERA.<br/><span>MISMA PASIÓN.</span></h1>
+              <p className="lead">Pampa Racing Team compite, desarrolla pilotos y construye comunidad. Preparación, telemetría y trabajo en equipo para ir siempre más lejos.</p>
               <div className="heroActions">
-                <button className="primary" onClick={() => setActive("competencias")}>VER COMPETENCIAS</button>
-                <button className="ghost" onClick={() => setActive("pilotos")}>CONOCER PILOTOS</button>
+                <button className="primary filled" onClick={() => setActive("competencias")}>VER COMPETENCIAS <b>→</b></button>
+                <button className="ghost" onClick={() => setActive("pilotos")}>CONOCER AL EQUIPO</button>
               </div>
             </div>
-            <div className="carStage">
-              <div className="car">
-                <div className="windshield">PAMPA <b>#77</b></div>
-                <div className="hoodSun">☀</div>
-                <span className="carName">PAMPA</span>
-              </div>
+
+            <div className="visualStage">
+              <div className="sunHalo">☀</div>
+              <HeroCar />
+              <div className="carCaption"><span>ARGENTINA</span><b>EN CADA CURVA</b></div>
+            </div>
+
+            <div className="heroTicker">
+              <span>DISCIPLINA EN CADA VUELTA</span><i/>
+              <span>PASIÓN EN CADA DETALLE</span><i/>
+              <span>MÁS QUE UN EQUIPO, UNA FAMILIA</span>
             </div>
           </section>
 
-          <section className="stats">
-            <article><strong>{pilots.length}</strong><span>PILOTOS ACTIVOS</span></article>
-            <article><strong>3</strong><span>CAMPEONATOS EN CURSO</span></article>
-            <article><strong>{totalPodiums}</strong><span>PODIOS DEL EQUIPO</span></article>
-            <article><strong>5</strong><span>SOCIOS ESTRATÉGICOS</span></article>
+          <section className="homeCards">
+            <article className="featureCard nextFeature">
+              <div className="featureTop"><span>PRÓXIMA FECHA</span><b>01</b></div>
+              <div className="dateBig">27 <small>SEP</small></div>
+              <h3>DAYTONA</h3>
+              <p>NORTH AMERICAN RACING LEAGUE · GT3</p>
+              <div className="featurePilots"><span>EA</span><span>AD</span><span>LL</span><b>3 PILOTOS PAMPA</b></div>
+              <button onClick={() => setActive("competencias")}>VER FECHA E INSCRIBIRME →</button>
+            </article>
+
+            <article className="featureCard teamFeature">
+              <div className="featureTop"><span>ESTADO DEL EQUIPO</span><b>02</b></div>
+              <div className="metric"><strong>{pilots.length}</strong><span>PILOTOS ACTIVOS</span></div>
+              <div className="metric"><strong>3</strong><span>CAMPEONATOS EN CURSO</span></div>
+              <div className="metric"><strong>{totalPodiums}</strong><span>PODIOS ACUMULADOS</span></div>
+              <div className="progressBrand"><i style={{width:"72%"}}/></div>
+              <small>OBJETIVO TEMPORADA 2026 · 72%</small>
+            </article>
+
+            <article className="featureCard pilotFeature">
+              <div className="featureTop"><span>PILOTO DESTACADO</span><b>03</b></div>
+              <div className="pilotNumber">#77</div>
+              <div className="pilotSun">☀</div>
+              <h3>EMILIANO<br/><span>ALMIRÓN</span></h3>
+              <p>GT / GR86 · {pilots[0].irating} iRating · {pilots[0].podiums} podios</p>
+              <button onClick={() => {setSelectedPilot(pilots[0]); setActive("pilotos")}}>VER PERFIL →</button>
+            </article>
           </section>
 
           <section className="about section">
