@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { approvedIndexImage } from "./indexImage";
 
 type Pilot = {
   id: string;
@@ -170,44 +171,28 @@ export default function PampaSite() {
 
   return (
     <main>
+      {active !== "equipo" && (
       <header className="topbar">
         <button className="brand" onClick={() => setActive("equipo")} aria-label="Pampa Racing Team">
           <span className="sunLogo" aria-hidden="true">☀</span>
           <span className="brandBlock"><b>PAMPA</b><small>RACING TEAM</small></span>
         </button>
         <nav>
-          <button className={active === "equipo" ? "active" : ""} onClick={() => setActive("equipo")}>EQUIPO</button>
+          <button className={active === "equipo" ? "active" : ""} onClick={() => setActive("equipo")}>INICIO</button>
           <button className={active === "competencias" ? "active" : ""} onClick={() => setActive("competencias")}>COMPETENCIAS</button>
           <button className={active === "pilotos" ? "active" : ""} onClick={() => setActive("pilotos")}>PILOTOS</button>
         </nav>
         <div className="season">TEMPORADA <strong>2026</strong></div>
       </header>
+      )}
 
       {active === "equipo" && (
         <>
-          <section className="hero heroV2">
-            <div className="trackGrid" />
-            <div className="heroCopy">
-              <div className="eyebrowLine"><span/> SIMRACING ARGENTINO · TEMPORADA 2026</div>
-              <h1>NUEVA ERA.<br/><span>MISMA PASIÓN.</span></h1>
-              <p className="lead">Pampa Racing Team compite, desarrolla pilotos y construye comunidad. Preparación, telemetría y trabajo en equipo para ir siempre más lejos.</p>
-              <div className="heroActions">
-                <button className="primary filled" onClick={() => setActive("competencias")}>VER COMPETENCIAS <b>→</b></button>
-                <button className="ghost" onClick={() => setActive("pilotos")}>CONOCER AL EQUIPO</button>
-              </div>
-            </div>
-
-            <div className="visualStage">
-              <div className="sunHalo">☀</div>
-              <HeroCar />
-              <div className="carCaption"><span>ARGENTINA</span><b>EN CADA CURVA</b></div>
-            </div>
-
-            <div className="heroTicker">
-              <span>DISCIPLINA EN CADA VUELTA</span><i/>
-              <span>PASIÓN EN CADA DETALLE</span><i/>
-              <span>MÁS QUE UN EQUIPO, UNA FAMILIA</span>
-            </div>
+          <section className="approvedIndex">
+            <img src={approvedIndexImage} alt="Pampa Racing Team — inicio" />
+            <button className="hotspot hsCompetencias" aria-label="Ver competencias" onClick={() => setActive("competencias")} />
+            <button className="hotspot hsPilotos" aria-label="Ver pilotos" onClick={() => setActive("pilotos")} />
+            <button className="hotspot hsEquipo" aria-label="Conocer el equipo" onClick={() => window.scrollTo({top: window.innerHeight * 0.9, behavior: "smooth"})} />
           </section>
 
           <section className="homeCards">
