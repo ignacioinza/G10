@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { pampaImage1 } from "./pampa-image-1";
 
 type Pilot = {
   id: string;
@@ -186,7 +187,7 @@ export default function PampaSite() {
       {active === "equipo" && (
         <>
           <section className="approvedIndex">
-            <img src="/pampa-index.webp" alt="Pampa Racing Team — inicio" />
+            <img src={`data:image/webp;base64,${pampaImage1}`} alt="Pampa Racing Team — inicio" />
             <button className="hotspot hsCompetencias" aria-label="Ver competencias" onClick={() => setActive("competencias")} />
             <button className="hotspot hsPilotos" aria-label="Ver pilotos" onClick={() => setActive("pilotos")} />
           </section>
