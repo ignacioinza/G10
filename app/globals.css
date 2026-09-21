@@ -65,5 +65,24 @@ button{cursor:pointer}
 .demo-switch{border-top:1px solid #2a3d46;padding-top:14px}.demo-switch>span{font-size:10px;color:#92a2aa}.demo-switch>div{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.demo-switch button{height:38px;border-radius:9px;border:1px solid #344a55;background:#142831;color:#c2cdd2;font-size:11px}.demo-switch button.active{border-color:var(--green);color:var(--green)}
 .connected-account{border:1px solid #2d424c;background:#10212a;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:5px}.connected-account span,.connected-account small{font-size:10px;color:#92a1a9}.connected-account strong{font-size:13px}.connected-account button{height:39px;border:0;border-radius:9px;background:#21343e;color:#f2f5f6;margin-top:9px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:11px;font-weight:700}
 .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#e9fff2;color:#103a25;padding:12px 17px;border-radius:99px;z-index:40;font-size:12px;font-weight:800;box-shadow:0 15px 40px #0008}
+@media(min-width:760px){
+  .desktop-layout{padding:24px}
+  .desktop-layout .phone-frame{width:min(100%,1180px);min-height:calc(100vh - 48px);border-radius:26px;padding:7px}
+  .desktop-layout .phone-screen,.desktop-layout .phone-screen>div:not(.account-overlay){min-height:calc(100vh - 62px);border-radius:19px}
+  .desktop-layout .app-header{height:112px;padding:30px 38px 18px;border-bottom:1px solid #20343f}
+  .desktop-layout .brand-logo{width:112px;height:38px}
+  .desktop-layout .brand-role{font-size:11px}
+  .desktop-layout .coach-content{padding:22px 38px 108px}
+  .desktop-layout .top-tabs{max-width:560px;margin:0 auto 24px}
+  .desktop-layout .coach-workspace{display:grid;grid-template-columns:minmax(320px,.9fr) minmax(420px,1.1fr);gap:30px;align-items:start}
+  .desktop-layout .coach-planning-column,.desktop-layout .coach-exercises-column{min-width:0}
+  .desktop-layout .coach-exercises-column{padding:0 0 0 30px;border-left:1px solid #263945}
+  .desktop-layout .exercise-heading{margin-top:0;height:36px}
+  .desktop-layout .editor-row{height:72px;grid-template-columns:20px 54px 1fr 28px;padding:8px 12px}
+  .desktop-layout .thumb{width:54px;height:54px}
+  .desktop-layout .bottom-nav{width:min(calc(100% - 62px),1104px);height:72px;border-radius:15px 15px 0 0;padding-bottom:8px}
+  .desktop-layout .account-overlay{position:fixed;align-items:center;justify-content:center}
+  .desktop-layout .account-sheet{max-width:430px;border-radius:24px}
+}
 @media(max-width:480px){.app-shell{padding:0}.phone-frame{width:100%;min-height:100vh;border:0;border-radius:0;padding:0}.phone-screen,.phone-screen>div:not(.account-overlay){min-height:100vh;border-radius:0}.app-header{padding-top:20px;height:94px}.training-screen{min-height:100vh}.training-header{padding-top:20px;height:67px}}
 @media(max-width:370px){.screen-content{padding-left:12px;padding-right:12px}.date-strip{gap:4px}.wellness-grid{gap:5px}.metric-card{padding:8px 6px}.training-row{grid-template-columns:23px 58px 1fr 22px}.training-row img{width:58px}}

@@ -18,6 +18,7 @@ import {
 
 type Role = "coach" | "athlete";
 type Screen = "home" | "training";
+type AppMode = "athlete-mobile" | "coach-mobile" | "coach-desktop" | "admin-desktop";
 
 const photos = [
   "/images/exercise-1.jpg",
@@ -77,19 +78,19 @@ function useLocalSession() {
   return { session, save };
 }
 
-function Brand({ role }: { role: Role }) {
+function Brand({ role, admin = false }: { role: Role; admin?: boolean }) {
   return (
     <div className="brand-lockup">
       <Image className="brand-logo" src="/images/g10-logo.png" alt="G10" width={94} height={32} priority />
-      <div className="brand-role">{role === "coach" ? "Profesor" : "Deportista"}</div>
+      <div className="brand-role">{admin ? "Administrador" : role === "coach" ? "Profesor" : "Deportista"}</div>
     </div>
   );
 }
 
-function Header({ role, onAccount, connected }: { role: Role; onAccount: () => void; connected: boolean }) {
+function Header({ role, onAccount, connected, admin = false }: { role: Role; onAccount: () => void; connected: boolean; admin?: boolean }) {
   return (
     <header className="app-header">
-      <Brand role={role} />
+      <Brand role={role} admin={admin} />
       <div className="header-actions">
         {role === "athlete" && <button className="bare-icon" aria-label="Notificaciones"><Bell size={21} /></button>}
         <button
@@ -175,67 +176,72 @@ function CoachView({
         <div className="top-tabs">
           <button className="active">Planificación</button><button>Deportistas</button><button>Evaluaciones</button>
         </div>
+        <div className="coach-workspace">
+          <section className="coach-planning-column">
+            <div className="week-title">
+              <button className="square-button"><ChevronLeft size={20} /></button>
+              <strong>Semana 16 – 22 Sep</strong>
+              <button className="square-button"><ChevronRight size={20} /></button>
+            </div>
+            <div className="date-strip">
+              {["Lun|16", "Mar|17", "Mié|18", "Jue|19", "Vie|20", "Sáb|21", "Dom|22"].map((day, index) => {
+                const [name, date] = day.split("|");
+                return <button key={day} className={index === 1 ? "selected" : ""}><span>{name}</span><strong>{date}</strong></button>;
+              })}
+            </div>
 
-        <div className="week-title">
-          <button className="square-button"><ChevronLeft size={20} /></button>
-          <strong>Semana 16 – 22 Sep</strong>
-          <button className="square-button"><ChevronRight size={20} /></button>
-        </div>
-        <div className="date-strip">
-          {["Lun|16", "Mar|17", "Mié|18", "Jue|19", "Vie|20", "Sáb|21", "Dom|22"].map((day, index) => {
-            const [name, date] = day.split("|");
-            return <button key={day} className={index === 1 ? "selected" : ""}><span>{name}</span><strong>{date}</strong></button>;
-          })}
-        </div>
+            <label className="field-label">Seleccioná deportista</label>
+            <div className="athlete-select">
+              <Image src={avatar} alt="" width={44} height={44} />
+              <span>
+                <strong>{selectedAthlete?.fullName ?? "Julián Bordón"}</strong>
+                <small>{selectedAthlete ? [selectedAthlete.sport, selectedAthlete.position].filter(Boolean).join(" · ") : "Delantero · 19 años"}</small>
+              </span>
+              <ChevronDown size={20} />
+              {athletes.length > 0 && (
+                <select aria-label="Seleccionar deportista" value={selectedAthleteId} onChange={(event) => onSelectAthlete(event.target.value)}>
+                  {athletes.map((athlete) => <option key={athlete.id} value={athlete.id}>{athlete.fullName}</option>)}
+                </select>
+              )}
+            </div>
 
-        <label className="field-label">Seleccioná deportista</label>
-        <div className="athlete-select">
-          <Image src={avatar} alt="" width={44} height={44} />
-          <span>
-            <strong>{selectedAthlete?.fullName ?? "Julián Bordón"}</strong>
-            <small>{selectedAthlete ? [selectedAthlete.sport, selectedAthlete.position].filter(Boolean).join(" · ") : "Delantero · 19 años"}</small>
-          </span>
-          <ChevronDown size={20} />
-          {athletes.length > 0 && (
-            <select aria-label="Seleccionar deportista" value={selectedAthleteId} onChange={(event) => onSelectAthlete(event.target.value)}>
-              {athletes.map((athlete) => <option key={athlete.id} value={athlete.id}>{athlete.fullName}</option>)}
-            </select>
-          )}
-        </div>
-
-        <div className="section-title"><h2>Crear sesión</h2><button>Plantillas</button></div>
-        <section className="panel form-panel">
-          <label>
-            <span>Nombre de la sesión</span>
-            <input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} />
-          </label>
-          <label>
-            <span>Objetivo</span>
-            <input value={draft.objective} onChange={(event) => setDraft({ ...draft, objective: event.target.value })} />
-          </label>
-          <div className="form-grid">
-            <label><span>Duración estimada</span><div className="input-with-unit"><input type="number" value={draft.duration} onChange={(event) => setDraft({ ...draft, duration: Number(event.target.value) })} /><em>min</em></div></label>
-            <label><span>Carga objetivo</span><select value={draft.load} onChange={(event) => setDraft({ ...draft, load: event.target.value as Session["load"] })}><option>Baja</option><option>Media</option><option>Alta</option></select></label>
-          </div>
-        </section>
-
-        <div className="section-title exercise-heading"><h2>Ejercicios</h2><button onClick={addExercise}><Plus size={16} /> Agregar</button></div>
-        <section className="exercise-editor">
-          {draft.exercises.slice(0, 6).map((exercise) => (
-            <motion.div layout key={exercise.id} className="editor-row">
-              <GripVertical className="drag" size={19} />
-              <Image className="thumb" src={exercise.image} alt="" width={48} height={48} />
-              <div className="editor-copy">
-                <input aria-label={"Nombre de " + exercise.name} value={exercise.name} onChange={(event) => updateExercise(exercise.id, event.target.value)} />
-                <span>{exercise.sets} series · {exercise.reps} repeticiones</span>
+            <div className="section-title"><h2>Crear sesión</h2><button>Plantillas</button></div>
+            <section className="panel form-panel">
+              <label>
+                <span>Nombre de la sesión</span>
+                <input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} />
+              </label>
+              <label>
+                <span>Objetivo</span>
+                <input value={draft.objective} onChange={(event) => setDraft({ ...draft, objective: event.target.value })} />
+              </label>
+              <div className="form-grid">
+                <label><span>Duración estimada</span><div className="input-with-unit"><input type="number" value={draft.duration} onChange={(event) => setDraft({ ...draft, duration: Number(event.target.value) })} /><em>min</em></div></label>
+                <label><span>Carga objetivo</span><select value={draft.load} onChange={(event) => setDraft({ ...draft, load: event.target.value as Session["load"] })}><option>Baja</option><option>Media</option><option>Alta</option></select></label>
               </div>
-              <button className="row-menu" onClick={() => removeExercise(exercise.id)} aria-label={"Eliminar " + exercise.name}><Trash2 size={16} /></button>
-            </motion.div>
-          ))}
-        </section>
-        <div className="dual-actions">
-          <button className="secondary-action" disabled={syncing} onClick={() => flash("Borrador guardado en este dispositivo")}>Guardar borrador</button>
-          <button className="primary-action" disabled={syncing} onClick={persist}>{syncing ? "Sincronizando…" : "Asignar sesión"}</button>
+            </section>
+          </section>
+
+          <section className="coach-exercises-column">
+            <div className="section-title exercise-heading"><h2>Ejercicios</h2><button onClick={addExercise}><Plus size={16} /> Agregar</button></div>
+            <section className="exercise-editor">
+              {draft.exercises.slice(0, 6).map((exercise) => (
+                <motion.div layout key={exercise.id} className="editor-row">
+                  <GripVertical className="drag" size={19} />
+                  <Image className="thumb" src={exercise.image} alt="" width={48} height={48} />
+                  <div className="editor-copy">
+                    <input aria-label={"Nombre de " + exercise.name} value={exercise.name} onChange={(event) => updateExercise(exercise.id, event.target.value)} />
+                    <span>{exercise.sets} series · {exercise.reps} repeticiones</span>
+                  </div>
+                  <button className="row-menu" onClick={() => removeExercise(exercise.id)} aria-label={"Eliminar " + exercise.name}><Trash2 size={16} /></button>
+                </motion.div>
+              ))}
+            </section>
+            <div className="dual-actions">
+              <button className="secondary-action" disabled={syncing} onClick={() => flash("Borrador guardado en este dispositivo")}>Guardar borrador</button>
+              <button className="primary-action" disabled={syncing} onClick={persist}>{syncing ? "Sincronizando…" : "Asignar sesión"}</button>
+            </div>
+          </section>
         </div>
       </main>
       <BottomNav role="coach" />
@@ -440,8 +446,10 @@ function AccountPanel({
   );
 }
 
-export function G10App() {
-  const [role, setRole] = useState<Role>("athlete");
+export function G10App({ mode = "athlete-mobile" }: { mode?: AppMode }) {
+  const initialRole: Role = mode === "athlete-mobile" ? "athlete" : "coach";
+  const [role, setRole] = useState<Role>(initialRole);
+  const [adminMode, setAdminMode] = useState(mode === "admin-desktop");
   const [screen, setScreen] = useState<Screen>("home");
   const [accountOpen, setAccountOpen] = useState(false);
   const { session: localSession, save: saveLocal } = useLocalSession();
@@ -449,15 +457,16 @@ export function G10App() {
   const session = workspace.remoteSession ?? localSession;
   useEffect(() => {
     if (!workspace.role) return;
+    setAdminMode(workspace.role === "admin");
     setRole(["admin", "coach", "trainer"].includes(workspace.role) ? "coach" : "athlete");
   }, [workspace.role]);
-  const switchRole = (nextRole: Role) => { setRole(nextRole); setScreen("home"); };
+  const switchRole = (nextRole: Role) => { setAdminMode(false); setRole(nextRole); setScreen("home"); };
   const saveSession = async (nextSession: Session) => {
     saveLocal(nextSession);
     return workspace.saveRemoteSession(nextSession);
   };
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${mode.endsWith("desktop") ? "desktop-layout" : "mobile-layout"}`}>
       <div className="phone-frame">
         <div className="phone-screen">
           <AnimatePresence mode="wait">
@@ -467,7 +476,7 @@ export function G10App() {
               </motion.div>
             ) : (
               <motion.div key={role} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <Header role={role} onAccount={() => setAccountOpen(true)} connected={Boolean(workspace.user)} />
+                <Header role={role} admin={adminMode} onAccount={() => setAccountOpen(true)} connected={Boolean(workspace.user)} />
                 {role === "coach" ? (
                   <CoachView
                     session={session}
