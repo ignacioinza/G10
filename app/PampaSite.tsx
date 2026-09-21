@@ -169,21 +169,19 @@ export default function PampaSite() {
   };
 
   return (
-    <main>
-      {active !== "equipo" && (
+    <main className={active === "equipo" ? "homeMode" : ""}>
       <header className="topbar">
         <button className="brand" onClick={() => setActive("equipo")} aria-label="Pampa Racing Team">
           <span className="sunLogo" aria-hidden="true">☀</span>
           <span className="brandBlock"><b>PAMPA</b><small>RACING TEAM</small></span>
         </button>
         <nav>
-          <button className={active === "equipo" ? "active" : ""} onClick={() => setActive("equipo")}>INICIO</button>
+          <button className={active === "equipo" ? "active" : ""} onClick={() => setActive("equipo")}>EQUIPO</button>
           <button className={active === "competencias" ? "active" : ""} onClick={() => setActive("competencias")}>COMPETENCIAS</button>
           <button className={active === "pilotos" ? "active" : ""} onClick={() => setActive("pilotos")}>PILOTOS</button>
         </nav>
         <div className="season">TEMPORADA <strong>2026</strong></div>
       </header>
-      )}
 
       {active === "equipo" && (
         <>
@@ -191,7 +189,6 @@ export default function PampaSite() {
             <img src="/pampa-index.webp" alt="Pampa Racing Team — inicio" />
             <button className="hotspot hsCompetencias" aria-label="Ver competencias" onClick={() => setActive("competencias")} />
             <button className="hotspot hsPilotos" aria-label="Ver pilotos" onClick={() => setActive("pilotos")} />
-            <button className="hotspot hsEquipo" aria-label="Conocer el equipo" onClick={() => window.scrollTo({top: window.innerHeight * 0.9, behavior: "smooth"})} />
           </section>
 
           <section className="homeCards">
