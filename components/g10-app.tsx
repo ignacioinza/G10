@@ -1,243 +1,344 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Activity, CalendarDays, Check, Dumbbell, Home, Plus, Trash2, Trophy, UserRound, UsersRound } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import {
+  ArrowLeft, ArrowRight, Bell, CalendarDays, Check, ChevronDown,
+  ChevronLeft, ChevronRight, Clock, Dumbbell, GripVertical, Home,
+  MessageCircle, MoreHorizontal, Plus, Share2, Trash2, UsersRound,
+} from "lucide-react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
-type Exercise = { id: string; name: string; sets: number; reps: string; rest: number };
+type Role = "coach" | "athlete";
+type Screen = "home" | "training";
+type Exercise = {
+  id: string; name: string; sets: number; reps: string; rest: number;
+  detail: string; image: string;
+};
 type Session = {
-  title: string;
-  objective: string;
-  duration: number;
-  load: "Baja" | "Media" | "Alta";
-  exercises: Exercise[];
+  title: string; objective: string; duration: number;
+  load: "Baja" | "Media" | "Alta"; exercises: Exercise[];
 };
 
+const photos = [
+  "/images/exercise-1.jpg",
+  "/images/exercise-2.jpg",
+  "/images/exercise-3.jpg",
+  "/images/exercise-4.jpg",
+  "/images/exercise-5.jpg",
+  "/images/exercise-6.jpg",
+];
+
 const defaultExercises: Exercise[] = [
-  { id: "1", name: "Sentadilla trasera", sets: 4, reps: "6", rest: 120 },
-  { id: "2", name: "Salto al cajón", sets: 4, reps: "5", rest: 90 },
-  { id: "3", name: "Sprint 20 m", sets: 6, reps: "1", rest: 60 },
-  { id: "4", name: "Plancha frontal", sets: 3, reps: "40 s", rest: 45 },
+  { id: "1", name: "Sentadilla trasera", sets: 4, reps: "6", rest: 120, detail: "Carga: 70% 1RM", image: photos[0] },
+  { id: "2", name: "Salto al cajón", sets: 4, reps: "5", rest: 90, detail: "Altura: 60 cm", image: photos[1] },
+  { id: "3", name: "Sprint 20 m", sets: 6, reps: "1", rest: 60, detail: "Recuperación completa", image: photos[2] },
+  { id: "4", name: "Zancada búlgara", sets: 3, reps: "8 por pierna", rest: 90, detail: "Carga: mancuernas", image: photos[3] },
+  { id: "5", name: "Plancha frontal", sets: 3, reps: "45 segundos", rest: 45, detail: "Core estable", image: photos[4] },
+  { id: "6", name: "Movilidad y vuelta a la calma", sets: 1, reps: "10 min", rest: 0, detail: "Respiración y descarga", image: photos[5] },
 ];
 
 const starter: Session = {
   title: "Fuerza + Velocidad",
-  objective: "Potencia de tren inferior y aceleración",
+  objective: "Desarrollo de fuerza y potencia",
   duration: 75,
   load: "Alta",
   exercises: defaultExercises,
 };
 
+const avatar = "/images/avatar.jpg";
+
+function normalizeSession(value: Partial<Session>): Session {
+  const source = Array.isArray(value.exercises) ? value.exercises : defaultExercises;
+  return {
+    ...starter,
+    ...value,
+    exercises: source.map((exercise, index) => ({
+      ...defaultExercises[index % defaultExercises.length],
+      ...exercise,
+      id: exercise.id || String(index + 1),
+      image: exercise.image || photos[index % photos.length],
+      detail: exercise.detail || "Trabajo técnico",
+    })),
+  };
+}
+
 function useLocalSession() {
   const [session, setSession] = useState<Session>(starter);
   useEffect(() => {
     const raw = localStorage.getItem("g10-demo-session");
-    if (raw) {
-      try { setSession(JSON.parse(raw)); } catch {}
-    }
+    if (!raw) return;
+    try { setSession(normalizeSession(JSON.parse(raw))); } catch {}
   }, []);
   const save = (next: Session) => {
-    setSession(next);
-    localStorage.setItem("g10-demo-session", JSON.stringify(next));
+    const normalized = normalizeSession(next);
+    setSession(normalized);
+    localStorage.setItem("g10-demo-session", JSON.stringify(normalized));
   };
   return { session, save };
 }
 
-export function G10App() {
-  const [role, setRole] = useState<"coach" | "athlete">("coach");
-  const { session, save } = useLocalSession();
-  const [toast, setToast] = useState<string | null>(null);
-  const showToast = (message: string) => {
-    setToast(message);
-    window.setTimeout(() => setToast(null), 2200);
-  };
-
+function Brand({ role }: { role: Role }) {
   return (
-    <main className="app-shell">
-      <div className="phone">
-        <header className="topbar">
-          <div className="brand">
-            <div className="logo">G10</div>
-            <div>
-              <div style={{fontWeight:800,fontSize:12}}>Alto Rendimiento</div>
-              <div className="brand-sub">Modo demo</div>
-            </div>
-          </div>
-          <div className="role-switch" aria-label="Cambiar rol">
-            <button className={role==="coach"?"active":""} onClick={()=>setRole("coach")}>Profe</button>
-            <button className={role==="athlete"?"active":""} onClick={()=>setRole("athlete")}>Alumno</button>
-          </div>
-        </header>
+    <div className="brand-lockup">
+      <div className="brand-word">G1<span>0</span></div>
+      <div className="brand-role">{role === "coach" ? "Profesor" : "Deportista"}</div>
+    </div>
+  );
+}
 
-        <AnimatePresence mode="wait">
-          {role === "coach" ? (
-            <motion.div key="coach" initial={{opacity:0,x:-18}} animate={{opacity:1,x:0}} exit={{opacity:0,x:18}} transition={{duration:.22}}>
-              <CoachView session={session} onSave={save} onDone={()=>showToast("Sesión asignada. Ya aparece en la vista del alumno.")} />
-            </motion.div>
-          ) : (
-            <motion.div key="athlete" initial={{opacity:0,x:18}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-18}} transition={{duration:.22}}>
-              <AthleteView session={session} onDone={()=>showToast("Entrenamiento completado. Feedback registrado en modo demo.")} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+function Header({ role, setRole }: { role: Role; setRole: (role: Role) => void }) {
+  return (
+    <header className="app-header">
+      <Brand role={role} />
+      <div className="header-actions">
+        {role === "athlete" && <button className="bare-icon" aria-label="Notificaciones"><Bell size={21} /></button>}
+        <button
+          className="avatar-button"
+          aria-label={role === "coach" ? "Cambiar a vista deportista" : "Cambiar a vista profesor"}
+          onClick={() => setRole(role === "coach" ? "athlete" : "coach")}
+        >
+          <Image src={avatar} alt="" width={38} height={38} />
+        </button>
       </div>
-      <BottomNav role={role} />
-      <AnimatePresence>{toast && <motion.div className="toast" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0,y:10}}>{toast}</motion.div>}</AnimatePresence>
+    </header>
+  );
+}
+
+function BottomNav({ role }: { role: Role }) {
+  const coach = [
+    [Home, "Inicio"], [UsersRound, "Deportistas"], [CalendarDays, "Planificar"],
+    [MessageCircle, "Mensajes"], [MoreHorizontal, "Más"],
+  ] as const;
+  const athlete = [
+    [Home, "Inicio"], [Dumbbell, "Entrenamiento"], [CalendarDays, "Progreso"],
+    [MessageCircle, "Mensajes"], [MoreHorizontal, "Más"],
+  ] as const;
+  return (
+    <nav className="bottom-nav">
+      {(role === "coach" ? coach : athlete).map(([Icon, label], index) => (
+        <button key={label} className={index === (role === "coach" ? 2 : 0) ? "active" : ""}>
+          <Icon size={20} strokeWidth={1.8} /><span>{label}</span>
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function CoachView({ session, save }: { session: Session; save: (session: Session) => void }) {
+  const [draft, setDraft] = useState(session);
+  const [toast, setToast] = useState("");
+  useEffect(() => setDraft(session), [session]);
+  const flash = (message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(""), 2200);
+  };
+  const updateExercise = (id: string, name: string) => setDraft({
+    ...draft,
+    exercises: draft.exercises.map((exercise) => exercise.id === id ? { ...exercise, name } : exercise),
+  });
+  const removeExercise = (id: string) => setDraft({
+    ...draft, exercises: draft.exercises.filter((exercise) => exercise.id !== id),
+  });
+  const addExercise = () => {
+    const index = draft.exercises.length;
+    setDraft({
+      ...draft,
+      exercises: [...draft.exercises, {
+        id: crypto.randomUUID(), name: "Nuevo ejercicio", sets: 3, reps: "10",
+        rest: 60, detail: "Trabajo técnico", image: photos[index % photos.length],
+      }],
+    });
+  };
+  return (
+    <>
+      <main className="screen-content coach-content">
+        <div className="top-tabs">
+          <button className="active">Planificación</button><button>Deportistas</button><button>Evaluaciones</button>
+        </div>
+
+        <div className="week-title">
+          <button className="square-button"><ChevronLeft size={20} /></button>
+          <strong>Semana 16 – 22 Sep</strong>
+          <button className="square-button"><ChevronRight size={20} /></button>
+        </div>
+        <div className="date-strip">
+          {["Lun|16", "Mar|17", "Mié|18", "Jue|19", "Vie|20", "Sáb|21", "Dom|22"].map((day, index) => {
+            const [name, date] = day.split("|");
+            return <button key={day} className={index === 1 ? "selected" : ""}><span>{name}</span><strong>{date}</strong></button>;
+          })}
+        </div>
+
+        <label className="field-label">Seleccioná deportista</label>
+        <button className="athlete-select">
+          <Image src={avatar} alt="" width={44} height={44} />
+          <span><strong>Julián Bordón</strong><small>Delantero · 19 años</small></span>
+          <ChevronDown size={20} />
+        </button>
+
+        <div className="section-title"><h2>Crear sesión</h2><button>Plantillas</button></div>
+        <section className="panel form-panel">
+          <label>
+            <span>Nombre de la sesión</span>
+            <input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} />
+          </label>
+          <label>
+            <span>Objetivo</span>
+            <input value={draft.objective} onChange={(event) => setDraft({ ...draft, objective: event.target.value })} />
+          </label>
+          <div className="form-grid">
+            <label><span>Duración estimada</span><div className="input-with-unit"><input type="number" value={draft.duration} onChange={(event) => setDraft({ ...draft, duration: Number(event.target.value) })} /><em>min</em></div></label>
+            <label><span>Carga objetivo</span><select value={draft.load} onChange={(event) => setDraft({ ...draft, load: event.target.value as Session["load"] })}><option>Baja</option><option>Media</option><option>Alta</option></select></label>
+          </div>
+        </section>
+
+        <div className="section-title exercise-heading"><h2>Ejercicios</h2><button onClick={addExercise}><Plus size={16} /> Agregar</button></div>
+        <section className="exercise-editor">
+          {draft.exercises.slice(0, 6).map((exercise) => (
+            <motion.div layout key={exercise.id} className="editor-row">
+              <GripVertical className="drag" size={19} />
+              <Image className="thumb" src={exercise.image} alt="" width={48} height={48} />
+              <div className="editor-copy">
+                <input aria-label={"Nombre de " + exercise.name} value={exercise.name} onChange={(event) => updateExercise(exercise.id, event.target.value)} />
+                <span>{exercise.sets} series · {exercise.reps} repeticiones</span>
+              </div>
+              <button className="row-menu" onClick={() => removeExercise(exercise.id)} aria-label={"Eliminar " + exercise.name}><Trash2 size={16} /></button>
+            </motion.div>
+          ))}
+        </section>
+        <div className="dual-actions">
+          <button className="secondary-action" onClick={() => { save(draft); flash("Borrador guardado"); }}>Guardar borrador</button>
+          <button className="primary-action" onClick={() => { save(draft); flash("Sesión asignada a Julián"); }}>Asignar sesión</button>
+        </div>
+      </main>
+      <BottomNav role="coach" />
+      <AnimatePresence>{toast && <motion.div className="toast" initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }}>{toast}</motion.div>}</AnimatePresence>
+    </>
+  );
+}
+
+function ProgressRing({ value, label }: { value: string; label: string }) {
+  const numeric = parseInt(value, 10);
+  return (
+    <div className="ring-stat">
+      <div className="ring" style={{ "--progress": Number.isFinite(numeric) ? numeric : 80 } as CSSProperties}><strong>{value}</strong></div>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function AthleteView({ session, openTraining }: { session: Session; openTraining: () => void }) {
+  return (
+    <>
+      <main className="screen-content athlete-content">
+        <h1>¡Hola, Julián!</h1>
+        <p className="subtitle">Disciplina hoy, resultados mañana.</p>
+        <section className="daily-progress panel">
+          <div><strong>Hoy</strong><span>Mar 17 Sep</span></div>
+          <div className="small-ring">72%</div>
+          <div><span>Semana 3/4</span><strong>72%</strong></div>
+        </section>
+
+        <motion.section className="session-card" whileTap={{ scale: 0.992 }}>
+          <div className="session-card-top"><span className="today-label">Sesión de hoy</span><span className="intensity-label">Alta intensidad</span></div>
+          <h2>{session.title}</h2>
+          <div className="session-meta"><span><Clock size={17} /> {session.duration} minutos</span><span><Dumbbell size={17} /> {session.exercises.length} ejercicios</span></div>
+          <p><i className="load-dot" /> Carga objetivo: {session.load}</p>
+          <button className="session-cta" onClick={openTraining}>Ver entrenamiento <ArrowRight size={20} /></button>
+        </motion.section>
+
+        <div className="section-title"><h2>Mi estado de hoy</h2><button>Completar ›</button></div>
+        <div className="wellness-grid">
+          <div className="metric-card"><b className="metric-icon purple">☾</b><span>Sueño</span><strong>7h 30m</strong></div>
+          <div className="metric-card"><b className="metric-icon yellow">ϟ</b><span>Fatiga</span><strong>3/10</strong></div>
+          <div className="metric-card"><b className="metric-icon red">♥</b><span>Dolor</span><strong>2/10</strong></div>
+          <div className="metric-card"><b className="metric-icon green">◉</b><span>Estrés</span><strong>3/10</strong></div>
+        </div>
+
+        <div className="section-title"><h2>Progreso semanal</h2><button>Ver más ›</button></div>
+        <section className="panel ring-panel">
+          <ProgressRing value="4/5" label="Sesiones" /><ProgressRing value="82%" label="Carga objetivo" /><ProgressRing value="92%" label="Adherencia" />
+        </section>
+        <section className="panel coach-message">
+          <Image src={avatar} alt="" width={42} height={42} />
+          <div><strong>Mensaje del profe</strong><p>Dale Julián! Buenas sensaciones esta semana. Enfocados en la técnica 🔥</p><small>Hace 2 horas</small></div>
+        </section>
+      </main>
+      <BottomNav role="athlete" />
+    </>
+  );
+}
+
+function TrainingView({ session, onBack }: { session: Session; onBack: () => void }) {
+  const [done, setDone] = useState<string[]>([]);
+  const progress = useMemo(() => Math.round((done.length / Math.max(session.exercises.length, 1)) * 100), [done, session.exercises.length]);
+  return (
+    <main className="training-screen">
+      <header className="training-header">
+        <button onClick={onBack}><ArrowLeft size={23} /></button><strong>Entrenamiento</strong><button><Share2 size={21} /></button>
+      </header>
+      <section className="training-hero">
+        <Image src={photos[0]} alt="Entrenamiento de fuerza" fill priority sizes="430px" />
+        <div className="hero-overlay">
+          <h1>{session.title}</h1>
+          <div><span><Clock size={16} /> {session.duration} minutos</span><span><Dumbbell size={16} /> {session.exercises.length} ejercicios</span><b>Alta intensidad</b></div>
+        </div>
+      </section>
+      <div className="training-body">
+        <div className="training-tabs"><button className="active">Ejercicios</button><button>Indicaciones</button><button>Material</button></div>
+        <section className="training-list">
+          {session.exercises.map((exercise, index) => {
+            const checked = done.includes(exercise.id);
+            return (
+              <motion.button
+                whileTap={{ scale: 0.99 }}
+                className={"training-row " + (checked ? "done" : "")}
+                key={exercise.id}
+                onClick={() => setDone(checked ? done.filter((id) => id !== exercise.id) : [...done, exercise.id])}
+              >
+                <span className="number-dot">{index + 1}</span>
+                <Image src={exercise.image} alt="" width={68} height={60} />
+                <span className="training-copy">
+                  <strong>{exercise.name}</strong><small>{exercise.sets} × {exercise.reps}</small><small>{exercise.detail}</small>{exercise.rest > 0 && <small>Descanso: {exercise.rest} seg</small>}
+                </span>
+                <span className="checkbox">{checked && <Check size={16} />}</span>
+              </motion.button>
+            );
+          })}
+        </section>
+        <div className="completion-copy"><span>Progreso de la sesión</span><strong>{done.length}/{session.exercises.length}</strong></div>
+        <div className="completion-track"><motion.div animate={{ width: progress + "%" }} /></div>
+        <button className="complete-button" disabled={progress < 100}>{progress === 100 ? "Sesión completada" : "Marcá todos los ejercicios"}</button>
+      </div>
     </main>
   );
 }
 
-function CoachView({session,onSave,onDone}:{session:Session;onSave:(s:Session)=>void;onDone:()=>void}) {
-  const [draft,setDraft] = useState<Session>(session);
-  const [newName,setNewName] = useState("");
-  useEffect(()=>setDraft(session),[session]);
-
-  const updateExercise = (id:string, patch:Partial<Exercise>) =>
-    setDraft(s=>({...s,exercises:s.exercises.map(e=>e.id===id?{...e,...patch}:e)}));
-
-  const addExercise = () => {
-    const name = newName.trim();
-    if(!name) return;
-    setDraft(s=>({...s,exercises:[...s.exercises,{id:crypto.randomUUID(),name,sets:3,reps:"8",rest:60}]}));
-    setNewName("");
-  };
-
-  return <>
-    <div className="eyebrow">Planificación semanal</div>
-    <h1 className="hero-title">Armá la sesión.<br/>El atleta la recibe.</h1>
-    <p className="hero-copy">Primer prototipo funcional de G10. Los cambios quedan guardados en este dispositivo para probar el flujo completo.</p>
-
-    <section className="section">
-      <div className="section-head"><h2>Deportista</h2><span className="pill"><UserRound size={13}/> Demo</span></div>
-      <div className="card">
-        <label className="label">Asignar a</label>
-        <select className="select" defaultValue="demo"><option value="demo">Deportista Demo</option></select>
-      </div>
-    </section>
-
-    <section className="section">
-      <div className="section-head"><h2>Crear sesión</h2><span className="muted">Hoy</span></div>
-      <div className="card">
-        <label className="label">Nombre de la sesión</label>
-        <input className="input" value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})}/>
-        <div style={{height:10}}/>
-        <label className="label">Objetivo</label>
-        <textarea className="textarea" value={draft.objective} onChange={e=>setDraft({...draft,objective:e.target.value})}/>
-        <div className="grid2" style={{marginTop:10}}>
-          <div><label className="label">Duración</label><input className="input" type="number" value={draft.duration} onChange={e=>setDraft({...draft,duration:Number(e.target.value)})}/></div>
-          <div><label className="label">Carga</label><select className="select" value={draft.load} onChange={e=>setDraft({...draft,load:e.target.value as Session["load"]})}><option>Baja</option><option>Media</option><option>Alta</option></select></div>
+export function G10App() {
+  const [role, setRole] = useState<Role>("athlete");
+  const [screen, setScreen] = useState<Screen>("home");
+  const { session, save } = useLocalSession();
+  const switchRole = (nextRole: Role) => { setRole(nextRole); setScreen("home"); };
+  return (
+    <div className="app-shell">
+      <div className="phone-frame">
+        <div className="phone-screen">
+          <AnimatePresence mode="wait">
+            {screen === "training" ? (
+              <motion.div key="training" initial={{ x: 35, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 35, opacity: 0 }}>
+                <TrainingView session={session} onBack={() => setScreen("home")} />
+              </motion.div>
+            ) : (
+              <motion.div key={role} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <Header role={role} setRole={switchRole} />
+                {role === "coach" ? <CoachView session={session} save={save} /> : <AthleteView session={session} openTraining={() => setScreen("training")} />}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
-    </section>
-
-    <section className="section">
-      <div className="section-head"><h2>Ejercicios</h2><span className="muted">{draft.exercises.length} cargados</span></div>
-      <div className="card">
-        {draft.exercises.map((e,i)=><motion.div layout key={e.id} className="exercise-row">
-          <div className="exercise-num">{i+1}</div>
-          <div>
-            <input className="input" value={e.name} onChange={ev=>updateExercise(e.id,{name:ev.target.value})} style={{padding:"9px 10px",fontSize:13}}/>
-            <div className="grid2" style={{marginTop:7}}>
-              <input className="input" type="number" value={e.sets} onChange={ev=>updateExercise(e.id,{sets:Number(ev.target.value)})} aria-label="Series" style={{padding:"8px 9px",fontSize:12}}/>
-              <input className="input" value={e.reps} onChange={ev=>updateExercise(e.id,{reps:ev.target.value})} aria-label="Repeticiones" style={{padding:"8px 9px",fontSize:12}}/>
-            </div>
-            <div className="exercise-meta">{e.sets} series · {e.reps} reps · {e.rest}s pausa</div>
-          </div>
-          <button className="icon-btn" onClick={()=>setDraft(s=>({...s,exercises:s.exercises.filter(x=>x.id!==e.id)}))} aria-label="Eliminar"><Trash2 size={15}/></button>
-        </motion.div>)}
-        <div className="divider"/>
-        <div style={{display:"flex",gap:8}}>
-          <input className="input" placeholder="Nuevo ejercicio" value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addExercise()}}/>
-          <button className="icon-btn" onClick={addExercise} aria-label="Agregar" style={{padding:"0 14px",color:"#b7ff45"}}><Plus/></button>
-        </div>
-      </div>
-    </section>
-
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1.25fr",gap:10,marginTop:16}}>
-      <button className="btn btn-secondary" onClick={()=>setDraft(session)}>Restablecer</button>
-      <button className="btn btn-primary" onClick={()=>{onSave(draft);onDone()}}>Asignar sesión</button>
     </div>
-  </>;
+  );
 }
 
-function AthleteView({session,onDone}:{session:Session;onDone:()=>void}) {
-  const [open,setOpen] = useState(false);
-  const [done,setDone] = useState<string[]>([]);
-  const [rpe,setRpe] = useState(7);
-  const pct = useMemo(()=>session.exercises.length ? Math.round(done.length/session.exercises.length*100) : 0,[done,session.exercises.length]);
-
-  if(open) return <>
-    <div className="eyebrow">Entrenamiento de hoy</div>
-    <h1 className="hero-title">{session.title}</h1>
-    <div style={{margin:"8px 0 16px"}}><span className="mini-chip">{session.duration} min</span><span className="mini-chip">{session.exercises.length} ejercicios</span><span className="mini-chip">Carga {session.load}</span></div>
-    <div className="card">
-      <div className="section-head"><h2>Progreso</h2><strong style={{color:"#b7ff45"}}>{pct}%</strong></div>
-      <div className="progress"><div style={{width:pct+"%"}}/></div>
-      <div className="divider"/>
-      {session.exercises.map((e,i)=>{
-        const checked=done.includes(e.id);
-        return <motion.button layout key={e.id} onClick={()=>setDone(d=>checked?d.filter(x=>x!==e.id):[...d,e.id])} className="check-row" style={{width:"100%",background:"none",borderLeft:0,borderRight:0,borderTop:0,color:"inherit",textAlign:"left",cursor:"pointer"}}>
-          <div className={"check "+(checked?"done":"")}>{checked&&<Check size={16}/>}</div>
-          <div><div className="exercise-name">{i+1}. {e.name}</div><div className="exercise-meta">{e.sets} series · {e.reps} reps · pausa {e.rest}s</div></div>
-        </motion.button>
-      })}
-    </div>
-    <section className="section">
-      <div className="section-head"><h2>Esfuerzo percibido</h2><span className="pill">RPE {rpe}/10</span></div>
-      <div className="card">
-        <input type="range" min="1" max="10" value={rpe} onChange={e=>setRpe(Number(e.target.value))} style={{width:"100%"}}/>
-      </div>
-    </section>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1.5fr",gap:10,marginTop:16}}>
-      <button className="btn btn-secondary" onClick={()=>setOpen(false)}>Volver</button>
-      <button className="btn btn-primary" disabled={done.length!==session.exercises.length} style={{opacity:done.length===session.exercises.length?1:.45}} onClick={()=>{onDone();setOpen(false)}}>Completar sesión</button>
-    </div>
-  </>;
-
-  return <>
-    <div className="eyebrow">Domingo · G10</div>
-    <h1 className="hero-title">Hola, Deportista.</h1>
-    <p className="hero-copy">Tu equipo ya dejó preparado el trabajo de hoy.</p>
-
-    <section className="section">
-      <div className="card today-card">
-        <div className="pill"><Dumbbell size={13}/> Entrenamiento de hoy</div>
-        <h2 style={{fontSize:24,margin:"14px 0 5px",letterSpacing:"-.6px"}}>{session.title}</h2>
-        <p className="hero-copy">{session.objective}</p>
-        <div className="grid2" style={{marginTop:18}}>
-          <div><div className="big-stat">{session.duration}</div><div className="stat-label">minutos</div></div>
-          <div><div className="big-stat">{session.exercises.length}</div><div className="stat-label">ejercicios</div></div>
-        </div>
-        <button className="btn btn-primary" style={{marginTop:18}} onClick={()=>setOpen(true)}>Ver entrenamiento</button>
-      </div>
-    </section>
-
-    <section className="section">
-      <div className="section-head"><h2>Bienestar</h2><span className="muted">Check-in diario</span></div>
-      <div className="wellness">
-        <div className="well"><strong>7h30</strong><span>Sueño</span></div>
-        <div className="well"><strong>3/10</strong><span>Fatiga</span></div>
-        <div className="well"><strong>2/10</strong><span>Dolor</span></div>
-        <div className="well"><strong>3/10</strong><span>Estrés</span></div>
-      </div>
-    </section>
-
-    <section className="section">
-      <div className="section-head"><h2>Semana</h2><span className="muted">Objetivo 4 sesiones</span></div>
-      <div className="card">
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"end"}}><div><div className="big-stat">3/4</div><div className="stat-label">sesiones completadas</div></div><Trophy color="#b7ff45" size={30}/></div>
-        <div className="progress"><div style={{width:"75%"}}/></div>
-      </div>
-    </section>
-  </>;
-}
-
-function BottomNav({role}:{role:"coach"|"athlete"}) {
-  const items = role==="coach"
-    ? [[Home,"Inicio"],[UsersRound,"Deportistas"],[CalendarDays,"Planificar"],[Activity,"Carga"]]
-    : [[Home,"Inicio"],[Dumbbell,"Entrenar"],[Activity,"Progreso"],[UserRound,"Perfil"]];
-  return <nav className="sticky-nav">{items.map(([Icon,label],i)=>{
-    const C = Icon as typeof Home;
-    return <div className={"nav-item "+(i===0?"active":"")} key={label as string}><C size={18}/><span>{label as string}</span></div>
-  })}</nav>
-}
+export default G10App;
