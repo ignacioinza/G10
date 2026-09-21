@@ -1,5 +1,5 @@
-import { G10App } from "@/components/g10-app";
+import PampaSite from "./PampaSite";
 
-export default function Page() {
-  return <G10App />;
+export default function Home() {
+  return <PampaSite />;
 }
