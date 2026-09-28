@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import type { PlanWeek } from "@/lib/g10-planning";
 
 export type G10Exercise = {
   id: string;
@@ -37,6 +38,30 @@ export type AthleteOption = {
 
 type WorkspaceRole = "admin" | "coach" | "athlete" | "trainer" | "nutritionist" | "physio";
 type AuthResult = { ok: boolean; message: string };
+
+export type WellnessValues = {
+  sleep: number;
+  fatigue: number;
+  pain: number;
+  stress: number;
+};
+
+export type MediaUploadResult = AuthResult & {
+  url?: string;
+};
+
+export type TestDefinition = {
+  id: string;
+  name: string;
+  unit: string;
+};
+
+export type TestResult = {
+  id: string;
+  name: string;
+  value: string;
+  measuredAt: string;
+};
 
 const exercisePhotos = [
   "/images/exercise-1.jpg",
@@ -84,6 +109,9 @@ export function useG10Workspace() {
   const [athletes, setAthletes] = useState<AthleteOption[]>([]);
   const [selectedAthleteId, setSelectedAthleteId] = useState("");
   const [remoteSession, setRemoteSession] = useState<G10Session | null>(null);
+  const [remoteWeeks, setRemoteWeeks] = useState<PlanWeek[] | null>(null);
+  const [testDefinitions, setTestDefinitions] = useState<TestDefinition[]>([]);
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [connectionMessage, setConnectionMessage] = useState(
     isSupabaseConfigured ? "Modo demostración" : "Supabase pendiente de configuración",
@@ -105,12 +133,51 @@ export function useG10Workspace() {
     setRemoteSession(data ? mapSession(data as Record<string, unknown>) : null);
   }, [supabase]);
 
+  const loadPlanning = useCallback(async (athleteId: string) => {
+    if (!supabase || !athleteId) return;
+    const { data, error } = await supabase
+      .from("planning_cycles")
+      .select("plan_data")
+      .eq("athlete_id", athleteId)
+      .order("starts_on", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      setConnectionMessage("La sesión cargó, pero no pudimos recuperar el mesociclo");
+      return;
+    }
+    const plan = data?.plan_data;
+    setRemoteWeeks(Array.isArray(plan) && plan.length ? plan as PlanWeek[] : null);
+  }, [supabase]);
+
+  const loadEvaluations = useCallback(async (athleteId: string, organizationId: string) => {
+    if (!supabase || !athleteId || !organizationId) return;
+    const [definitionsResponse, resultsResponse] = await Promise.all([
+      supabase.from("physical_test_definitions").select("id, name, unit").eq("organization_id", organizationId).order("name"),
+      supabase.from("physical_test_results").select("id, numeric_value, text_value, measured_at, physical_test_definitions(name, unit)").eq("athlete_id", athleteId).order("measured_at", { ascending: false }).limit(12),
+    ]);
+    setTestDefinitions((definitionsResponse.data ?? []).map((item) => ({ id: item.id, name: item.name, unit: item.unit ?? "" })));
+    setTestResults((resultsResponse.data ?? []).map((item) => {
+      const definition = item.physical_test_definitions;
+      const rawValue = item.numeric_value ?? item.text_value ?? "—";
+      return {
+        id: item.id,
+        name: definition?.name ?? "Evaluación",
+        value: `${rawValue}${definition?.unit ? ` ${definition.unit}` : ""}`,
+        measuredAt: item.measured_at,
+      };
+    }));
+  }, [supabase]);
+
   const loadWorkspace = useCallback(async (activeUser: User | null) => {
     setUser(activeUser);
     if (!supabase || !activeUser) {
       setRole(null);
       setAthletes([]);
       setRemoteSession(null);
+      setRemoteWeeks(null);
+      setTestDefinitions([]);
+      setTestResults([]);
       setConnectionMessage(isSupabaseConfigured ? "Modo demostración" : "Supabase pendiente de configuración");
       return;
     }
@@ -187,8 +254,15 @@ export function useG10Workspace() {
   }, [loadWorkspace, supabase]);
 
   useEffect(() => {
-    if (user && selectedAthleteId) void loadSession(selectedAthleteId);
-  }, [loadSession, selectedAthleteId, user]);
+    if (user && selectedAthleteId) {
+      const athlete = athletes.find((item) => item.id === selectedAthleteId);
+      void Promise.all([
+        loadSession(selectedAthleteId),
+        loadPlanning(selectedAthleteId),
+        athlete ? loadEvaluations(selectedAthleteId, athlete.organizationId) : Promise.resolve(),
+      ]);
+    }
+  }, [athletes, loadEvaluations, loadPlanning, loadSession, selectedAthleteId, user]);
 
   const signIn = async (email: string, password: string): Promise<AuthResult> => {
     if (!supabase) return { ok: false, message: "Supabase todavía no está configurado." };
@@ -289,6 +363,116 @@ export function useG10Workspace() {
       : { ok: true, message: "Entrenamiento registrado." };
   };
 
+  const saveWellness = async (values: WellnessValues, notes: string): Promise<AuthResult> => {
+    localStorage.setItem("g10-wellness", JSON.stringify({ ...values, notes, savedAt: new Date().toISOString() }));
+    if (!supabase || !user || !selectedAthleteId) {
+      return { ok: true, message: "Estado guardado en modo demostración." };
+    }
+    if (role !== "athlete") {
+      return { ok: false, message: "El estado diario debe registrarlo el deportista." };
+    }
+    setSyncing(true);
+    const { error } = await supabase.from("wellness_checkins").upsert({
+      athlete_id: selectedAthleteId,
+      checkin_date: new Date().toISOString().slice(0, 10),
+      sleep_hours: values.sleep,
+      fatigue: values.fatigue,
+      stress: values.stress,
+      pain: values.pain,
+      notes: notes.trim() || null,
+    }, { onConflict: "athlete_id,checkin_date" });
+    setSyncing(false);
+    return error
+      ? { ok: false, message: "No pudimos sincronizar tu estado. Quedó guardado en este dispositivo." }
+      : { ok: true, message: "Estado diario sincronizado." };
+  };
+
+  const savePlanning = async (weeks: PlanWeek[]): Promise<AuthResult> => {
+    localStorage.setItem("g10-mesocycle", JSON.stringify(weeks));
+    if (!supabase || !user) return { ok: true, message: "Mesociclo guardado en modo demostración." };
+    const athlete = athletes.find((item) => item.id === selectedAthleteId);
+    if (!athlete) return { ok: false, message: "Seleccioná un deportista para guardar el mesociclo." };
+    if (!role || !["admin", "coach", "trainer"].includes(role)) {
+      return { ok: false, message: "Tu rol no puede modificar la planificación." };
+    }
+    const now = new Date();
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 27);
+    setSyncing(true);
+    const { error } = await supabase.from("planning_cycles").upsert({
+      organization_id: athlete.organizationId,
+      athlete_id: athlete.id,
+      title: `Mesociclo ${start.toLocaleDateString("es-AR", { month: "long", year: "numeric", timeZone: "UTC" })}`,
+      starts_on: start.toISOString().slice(0, 10),
+      ends_on: end.toISOString().slice(0, 10),
+      status: "active",
+      plan_data: weeks,
+      created_by: user.id,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "organization_id,athlete_id,starts_on" });
+    setSyncing(false);
+    if (!error) setRemoteWeeks(weeks);
+    return error
+      ? { ok: false, message: "No pudimos sincronizar el mesociclo." }
+      : { ok: true, message: "Mesociclo sincronizado con Supabase." };
+  };
+
+  const uploadMedia = async (file: File): Promise<MediaUploadResult> => {
+    const allowed = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm"];
+    if (!allowed.includes(file.type)) return { ok: false, message: "Formato no admitido." };
+    if (file.size > 50 * 1024 * 1024) return { ok: false, message: "El archivo supera el límite de 50 MB." };
+    if (!supabase || !user) return { ok: true, message: "Vista previa local lista.", url: URL.createObjectURL(file) };
+    const athlete = athletes.find((item) => item.id === selectedAthleteId);
+    if (!athlete) return { ok: false, message: "Seleccioná un deportista antes de cargar material." };
+    const safeName = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]/g, "-");
+    const path = `${athlete.organizationId}/${user.id}/${crypto.randomUUID()}-${safeName}`;
+    setSyncing(true);
+    const { error: uploadError } = await supabase.storage.from("g10-media").upload(path, file, { upsert: false });
+    if (uploadError) {
+      setSyncing(false);
+      return { ok: false, message: "No pudimos cargar el archivo." };
+    }
+    const { error: recordError } = await supabase.from("media_assets").insert({
+      organization_id: athlete.organizationId,
+      athlete_id: athlete.id,
+      bucket_path: path,
+      file_name: file.name,
+      mime_type: file.type,
+      size_bytes: file.size,
+      created_by: user.id,
+    });
+    if (recordError) {
+      await supabase.storage.from("g10-media").remove([path]);
+      setSyncing(false);
+      return { ok: false, message: "El archivo no pudo registrarse de forma segura." };
+    }
+    const { data } = await supabase.storage.from("g10-media").createSignedUrl(path, 3600);
+    setSyncing(false);
+    return { ok: true, message: "Archivo sincronizado.", url: data?.signedUrl };
+  };
+
+  const saveTestResult = async (testId: string, numericValue: number): Promise<AuthResult> => {
+    if (!Number.isFinite(numericValue)) return { ok: false, message: "Ingresá un resultado válido." };
+    if (!supabase || !user) return { ok: true, message: "Evaluación guardada en modo demostración." };
+    const athlete = athletes.find((item) => item.id === selectedAthleteId);
+    if (!athlete) return { ok: false, message: "Seleccioná un deportista." };
+    if (!role || !["admin", "coach", "trainer"].includes(role)) return { ok: false, message: "Tu rol no puede cargar evaluaciones." };
+    setSyncing(true);
+    const { error } = await supabase.from("physical_test_results").insert({
+      athlete_id: athlete.id,
+      test_id: testId,
+      measured_at: new Date().toISOString().slice(0, 10),
+      numeric_value: numericValue,
+      recorded_by: user.id,
+    });
+    if (!error) await loadEvaluations(athlete.id, athlete.organizationId);
+    setSyncing(false);
+    return error
+      ? { ok: false, message: "No pudimos guardar la evaluación." }
+      : { ok: true, message: "Evaluación sincronizada." };
+  };
+
   return {
     configured: isSupabaseConfigured,
     user,
@@ -297,6 +481,9 @@ export function useG10Workspace() {
     selectedAthleteId,
     setSelectedAthleteId,
     remoteSession,
+    remoteWeeks,
+    testDefinitions,
+    testResults,
     syncing,
     connectionMessage,
     signIn,
@@ -304,5 +491,10 @@ export function useG10Workspace() {
     signOut,
     saveRemoteSession,
     completeRemoteSession,
+    saveWellness,
+    savePlanning,
+    uploadMedia,
+    saveTestResult,
   };
 }
+
